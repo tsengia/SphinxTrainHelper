@@ -3,6 +3,11 @@ A Bash script designed to make training sphinx4 and pocketsphinx acoustic librar
 
 This script is not created by the authors of Sphinx CMU or related software and assets.
 
+# Installation
+Sphinx Training Helper uses the ```arecord``` command during Readings Mode. Please ensure that ALSA is installed on your machine and configured properly in order to use Readings.  
+
+The Sphinx CMU toolkit should be downloaded and installed on your machine. This includes: sphinxbase, pocketsphinx, and sphinx_train.  
+
 # Instructions
 `
 Usage: trainer [OPTIONS] input_model output_model
