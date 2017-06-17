@@ -8,6 +8,12 @@ Sphinx Training Helper uses the ```arecord``` command during Readings Mode. Plea
 
 The Sphinx CMU toolkit should be downloaded and installed on your machine. This includes: sphinxbase, pocketsphinx, and sphinx_train.  
 
+In order to train/update the acoustic model, this script will need the following programs in the same directory: 
+bw, map_adapt, mllr_solve, mllr_transform, mk_s2sendump  
+
+These programs/binaries can be found where you installed sphinx_train, for more information, see the tutorial on CMU Sphinx's website.
+
+
 # Instructions
     
     Usage: trainer [OPTIONS] input_model output_model
