@@ -15,8 +15,10 @@
 #
 ###############################################################################################
 
-#Variables and their default values
+
 lineCount=21 # Number of lines to be read for the readings
+
+#Variables and their default values
 PROMPT_FOR_READINGS="yes"
 DO_READINGS="yes"
 transcriptionFile="arctic20.transcription"
@@ -28,14 +30,13 @@ DO_MLLR="yes"
 SAMPLE_RATE=16000
 LANGUAGE_MODEL="en-us.lm.bin"
 DICTIONARY_FILE="cmudict-en-us.dict"
-HELP="no"
 POCKET_SPHINX="yes"
 
 confirm() {
     # call with a prompt string or use a default
     read -r -p "${1:-Would you like to keep this recording? (No will start the recording over again.) [y/N]} " response
     case "$response" in
-        [yY][eE][sS]|[yY]) 
+        [yY][eE][sS]|[yY])
             return 0
             ;;
         *)
@@ -68,7 +69,7 @@ askForReadings() {
     # call with a prompt string or use a default
     read -r -p "${1:-Would you like to use the current audio files? (No will start the process of making new recordings.) [y/N]} " response
     case "$response" in
-        [yY][eE][sS]|[yY]) 
+        [yY][eE][sS]|[yY])
             DO_READINGS="no"
             ;;
         *)
@@ -188,21 +189,23 @@ Usage: trainer [OPTIONS] input_model output_model
 
 OPTIONS may be any of:
 	-h	--help			Displays this help text and exits.
-	-r	--readings {yes|no}	Enable or disable sentence reading. Disabling sentence reading means that the audio files in the working directory will be used to train.
+	-r	--readings {yes|no}	Enable or disable sentence reading. Disabling sentence reading means that the audio files in the working directory (as referenced by the fileids) will be used to train.
 	-s	--sample_rate {int}	Specify the sample rate for the audio files. Expand the value (ie 16kHz should be 16000). Default is 16000.
 		--map {yes|no}		Enable or disable MAP weight updating. Default is yes.
 		--mllr {yes|no}		Enable or disable MLLR weight updating. Default is yes.
 		--convert-mdef {yes|no}	Specify whether or not to convert the mdef file in the acoustic model to text format. If it is already in text format, save yourself some time by disabling it. Default is no.
-	-l	--lines {int}		Specify the number of lines/sentences to be read in the transcript file.
-	-t	--transcript {file}	Specify the transcript file for readings.
-	-f	--fileids {file}	Specify the fileids file for readings.
+	-l	--lines {int}		Specify the number of lines/sentences to be read in the transcript file. (default: 21)
+	-t	--transcript {file}	Specify the transcript file for readings. (default: arctic20.transcription)
+	-f	--fileids {file}	Specify the fileids file for readings. (default: acrtic20.fileids)
 	-p	--pocketsphinx {yes|no} Specfiy whether or not you are training the model for pocket sphinx. Specifying yes will add optimizations. Default is yes. Set to "no" if using for Sphinx4 (Java).
+
+Issues, questions or suggestions: https://github.com/ExpandingDev/SphinxTrainingHelper
 EOF
-read
+exit 2
 }
 
 #Parsing arguments
-while [[ $# -gt 1 ]]
+while [[ $# -gt 0 ]]
 do
 key="$1"
 
@@ -225,7 +228,7 @@ case $key in
     shift
     ;;
     -h|--help)
-    HELP="yes"
+    displayHelp
     ;;
     --covert-mdef)
     CONVERT_MDEF="$2"
@@ -259,11 +262,6 @@ case $key in
 esac
 shift # past argument or value
 done
-
-test $HELP == "yes" && (displayHelp)
-if [ HELP == "yes" ]; then
-exit
-fi
 
 echo "Loading...."
 rm -rf recordings
