@@ -194,7 +194,7 @@ OPTIONS may be any of:
 	-s	--sample_rate {int}	Specify the sample rate for the audio files. Expand the value (ie 16kHz should be 16000). Default is 16000.
 		--map {yes|no}		Enable or disable MAP weight updating. Default is yes.
 		--mllr {yes|no}		Enable or disable MLLR weight updating. Default is yes.
-		--convert-mdef {yes|no}	Specify whether or not to convert the mdef file in the acoustic model to text format. If it is already in text format, save yourself some time by disabling it. Default is no.
+		--convert-mdef {yes|no}	Specify whether or not to convert the mdef file in the acoustic model to text format. If it is already in text format, save yourself some time by disabling it. Default is yes.
 	-l	--lines {int}		Specify the number of lines/sentences to be read in the transcript file. (default: 21)
 	-t	--transcript {file}	Specify the transcript file for readings. (default: arctic20.transcription)
 	-f	--fileids {file}	Specify the fileids file for readings. (default: acrtic20.fileids)
