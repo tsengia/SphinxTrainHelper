@@ -11,7 +11,7 @@ The Sphinx CMU toolkit should be downloaded and installed on your machine. This 
 In order to train/update the acoustic model, this script will need the following programs in the same directory: 
 bw, map_adapt, mllr_solve, mllr_transform, mk_s2sendump  
 
-These programs/binaries can be found where you installed sphinx_train, for more information, see the tutorial on CMU Sphinx's website.
+These programs/binaries can be found where you installed sphinx_train (on Linux this should be `/usr/local/libexec/sphinxtrain`, for more information, see the tutorial on CMU Sphinx's website. Simply copy the needed executables from that directory to the same directory as the Sphinx Training Helper.
 
 
 # Instructions
