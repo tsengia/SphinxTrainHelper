@@ -55,7 +55,11 @@ echo "When you are finished reciting the sentence, press any key."
 echo "Continue reading the sentences until you have gone through all of them."
 echo "Once all the sentences have been read, please wait a few moments for the trainer to run."
 echo ""
+
+#Take the transcription file and strip all of the <s> tags away and put it in a regular txt file to be read line by line
 sed -r "s/<s>/ /g; s/<\/s>/ /g; s/\(.+\)/ /g" $transcriptionFile > transcription.txt
+
+
 echo "There are $lineCount sentences to be read."
 
 for ((i=1; i < lineCount; i++))
@@ -199,7 +203,8 @@ OPTIONS may be any of:
 	-t	--transcript {file}	Specify the transcript file for readings. (default: arctic20.transcription)
 	-f	--fileids {file}	Specify the fileids file for readings. (default: acrtic20.fileids)
 	-p	--pocketsphinx {yes|no} Specfiy whether or not you are training the model for pocket sphinx. Specifying yes will add optimizations. Default is yes. Set to "no" if using for Sphinx4 (Java).
-
+        -d  --dict                      Specify the path to the dictionary to use. Default is "cmudict-en-us.dict"
+    
 Issues, questions or suggestions: https://github.com/ExpandingDev/SphinxTrainingHelper
 EOF
 exit 2
@@ -213,7 +218,7 @@ key="$1"
 case $key in
     -r|--readings)
     PROMPT_FOR_READINGS="no"
-    READINGS_ENABLED="$2"
+    DO_READINGS="$2"
     shift # past argument
     ;;
     --map)
@@ -275,22 +280,47 @@ test $OUTPUT_MODEL != $INPUT_MODEL && (cp -a $INPUT_MODEL $OUTPUT_MODEL) # Test 
 #cp -a /usr/local/share/pocketsphinx/model/en-us/cmudict-en-us.dict .
 #cp -a /usr/local/share/pocketsphinx/model/en-us/en-us.lm.bin .
 clear
+
+#Sanitize the destination path. Remove the ending / if there is one
 OUTPUT_MODEL=${OUTPUT_MODEL%/}
-echo $OUTPUT_MODEL
 
-test $PROMPT_FOR_READINGS == "yes" && DO_READINGS=$(askForReadings)
+#Ask to do the readings if the user didnt specify
+if [ $PROMPT_FOR_READINGS = "yes" ]; then
+    DO_READINGS=$(askForReadings)
+fi
 
-read
+#Do the readings if the user wants to
 if [ $DO_READINGS = "yes" ]; then
     doReadings
 fi
 
 createAcousticFeatures
-test $CONVERT_MDEF == "yes" && (convertmdef)
+
+#Convert the mdef file to txt filetype
+if [ $CONVERT_MDEF = "yes" ]; then
+    convertmdef
+fi
+
 observationCounts
-test $DO_MAP == "yes" && (domapupdate)
-test $DO_MLLR == "yes" && (domllrupdate)
-test $CREATE_SENDUMP == "yes" && (makesendump)
-test $POCKET_SPHINX == "yes" && (packageforpocket)
+
+#MAP
+if [ $DO_MAP = "yes" ]; then
+    domapupdate
+fi
+
+#MLLR
+if [ $DO_MLLR = "yes" ]; then
+    domllrupdate
+fi
+
+#MLLR
+if [ $CREATE_SENDUMP = "yes" ]; then
+    makesendump
+fi
+
+#Pocket Sphinx
+if [ $POCKET_SPHINX = "yes" ]; then
+    packageforpocket
+fi
 
 echo "DONE TRAINING."
