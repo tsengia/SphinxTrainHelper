@@ -34,7 +34,8 @@ POCKET_SPHINX="yes"
 
 confirm() {
     # call with a prompt string or use a default
-    read -r -p "${1:-Would you like to keep this recording? (No will start the recording over again.) [y/N]} " response
+    echo " "
+    read -r -p "${1:-Would you like to keep this recording? (No will start the recording over again.) [y/N]}" response
     case "$response" in
         [yY][eE][sS]|[yY])
             return 0
@@ -50,7 +51,7 @@ echo "Sphinx 4 Acoustic Library Auto Trainer"
 echo "--------------------------------------"
 echo "INSTRUCTIONS"
 echo "A series of text will be displayed. Please recite the sentences to the best of your ability."
-echo "When you are finished reciting the sentence, press the space bar."
+echo "When you are finished reciting the sentence, press any key."
 echo "Continue reading the sentences until you have gone through all of them."
 echo "Once all the sentences have been read, please wait a few moments for the trainer to run."
 echo ""
@@ -70,10 +71,10 @@ askForReadings() {
     read -r -p "${1:-Would you like to use the current audio files? (No will start the process of making new recordings.) [y/N]} " response
     case "$response" in
         [yY][eE][sS]|[yY])
-            DO_READINGS="no"
+            echo "no"
             ;;
         *)
-            DO_READINGS="yes"
+            echo "yes"
             ;;
     esac
 }
@@ -87,12 +88,12 @@ readSentence() {
 	sleep 0.2
 	arecord -c 1 -V mono -r $SAMPLE_RATE -f S16_LE output.wav &
 	childId=$!
-	read
-	pkill -TERM -P $childId
+	read -n 1 -s -r -p "[Press any key to finish recording]"
+	kill -9 $childId
 	sleep 0.5
 	if  confirm ; then
 		return 1
-	else 
+	else
 		clear
 		readSentence
 	fi
@@ -173,7 +174,7 @@ echo " "
 packageforpocket() {
 makesendump
 rm $OUTPUT_MODEL/mdef.txt
-rm $OUTPUT_MODEL/mixtue_weights
+rm $OUTPUT_MODEL/mixture_weights
 echo "Packaged for pocket sphinx."
 }
 
@@ -274,10 +275,15 @@ test $OUTPUT_MODEL != $INPUT_MODEL && (cp -a $INPUT_MODEL $OUTPUT_MODEL) # Test 
 #cp -a /usr/local/share/pocketsphinx/model/en-us/cmudict-en-us.dict .
 #cp -a /usr/local/share/pocketsphinx/model/en-us/en-us.lm.bin .
 clear
+OUTPUT_MODEL=${OUTPUT_MODEL%/}
+echo $OUTPUT_MODEL
 
+test $PROMPT_FOR_READINGS == "yes" && DO_READINGS=$(askForReadings)
 
-test $PROMPT_FOR_READINGS == "yes" && (askForReadings)
-test $DO_READINGS == "yes" && (doReadings)
+read
+if [ $DO_READINGS = "yes" ]; then
+    doReadings
+fi
 
 createAcousticFeatures
 test $CONVERT_MDEF == "yes" && (convertmdef)
