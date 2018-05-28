@@ -481,6 +481,32 @@ if [ ! -f $INPUT_MODEL/mixture_weights ]; then
     exit 1
 fi
 
+#Check to see if we have all the necessary config/base files.
+if [ ! -f $transcriptionFile ]; then
+    echo "ERROR: The transcription file ($transcriptionFile) is missing!"
+    exit 1
+fi
+
+if [ ! -f $fileidsFile ]; then
+    echo "ERROR: The File IDs file ($fileidsFile) is missing!"
+    exit 1
+fi
+
+if [ ! -f $LANGUAGE_MODEL ]; then
+    echo "ERROR: The language model file ($LANGUAGE_MODEL) is missing!"
+    exit 1
+fi
+
+if [ ! -f $DICTIONARY_FILE ]; then
+    echo "ERROR: The dictionary ($DICTIONARY_FILE) is missing!"
+    exit 1
+fi
+
+if [ ! -d $INPUT_MODEL ]; then
+    echo "ERROR: Could not find the specified input/base acoustic model you specified: $INPUT_MODEL"
+    exit 1
+fi
+
 # Check to see if the user entered a correct acoustic model type
 case "$inputType" in
     [pP][tT][mM]|[pP])
@@ -501,11 +527,12 @@ case "$inputType" in
         ;;
 esac
 
-test $OUTPUT_MODEL != $INPUT_MODEL && (cp -a $INPUT_MODEL $OUTPUT_MODEL) # Test to make sure these aren't the same directory. If they are, that means the user simply wants to not make a separate copy, so don't make a copy.
+# Test to make sure these aren't the same 
+if [ $OUTPUT_MODEL/feat.params -ef $INPUT_MODEL/feat.params ]; then
+    echo "ERROR: Input and Output model paths are the same! This is not allowed!"
+    exit 1
+fi
 
-#cp -a /usr/local/share/pocketsphinx/model/en-us/en-us .
-#cp -a /usr/local/share/pocketsphinx/model/en-us/cmudict-en-us.dict .
-#cp -a /usr/local/share/pocketsphinx/model/en-us/en-us.lm.bin .
 clear
 
 #Ask to do the readings if the user didn't specify
