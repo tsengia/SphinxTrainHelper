@@ -43,3 +43,18 @@ Additionally, the `word_align.pl` script is needed to test the effectiveness of 
 The so called "Readings Mode" in this script is a simple command line interface that allows the user to read the entire transcript file line by line while recording. If readings mode is enabled, the user will be displayed a line from the transcript file that should be read aloud. When the user is done reading the line, they can press any key to stop recording. The user is then prompted to either user the recording or redo the recording. Once all lines from the transcript are read, the script will begin adapting the acoustic model.  
 
 The purpose of Readings Mode is to make recording quick, simple, and painless for the user. No need to open up Audacity or a recording program and splice audio recordings, just read and press the enter key.
+
+# Transcription File and File IDs File
+The CMU Sphinx website provides examples for writing transcript and file IDs files, but here are the formats anyways.
+
+### Transcription File
+A text file containing the words that will be/are spoken in an audio file.  
+The words should be grouped into sentences as marked by an XML-like `<s>Your words go here</s>` tag.
+Following the `<s>` tag should be a space and a set of parenthesis with the audio file name inside (without the extension).  
+For example:  
+
+    <s> hello world this is an example transcription file </s> (audiofile_0001)
+    <s> this is the second sentence in the transcription file </s> (audiofile_0002)
+    <s> we can even add a third sentence </s> (audiofile_0003)
+    <s> just remember to increment the file id in the parenthesises </s> (audiofile_0001)
+    
