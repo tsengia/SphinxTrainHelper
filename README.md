@@ -62,7 +62,8 @@ For example:
 The File IDs file is simply a text file where each line contains the file name of an audio file (do not include the extension).  
 The file names should be listed in the same order as the transcription file.  
 Remember to increment any numbers identifying the audio files.
-Example File IDs file:
+Example File IDs file:  
+
     audiofile_0001
     audiofile_0002
     audiofile_0003
