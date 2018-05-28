@@ -14,7 +14,10 @@
 # By downloading/installing/running this script you agree to these terms.
 #
 ###############################################################################################
-
+#
+# Based on the instructions from: https://cmusphinx.github.io/wiki/tutorialadapt/
+# And instructions from: https://cmusphinx.github.io/wiki/tutorialtuning/
+#
 
 lineCount=21 # Number of lines to be read for the readings
 
@@ -24,13 +27,12 @@ DO_READINGS="yes"
 transcriptionFile="arctic20.transcription"
 fileidsFile="arctic20.fileids"
 CREATE_SENDUMP="no"
-CONVERT_MDEF="yes"
 DO_MAP="yes"
 DO_MLLR="yes"
 SAMPLE_RATE=16000
 LANGUAGE_MODEL="en-us.lm.bin"
 DICTIONARY_FILE="cmudict-en-us.dict"
-POCKET_SPHINX="yes"
+POCKET_SPHINX="no"
 
 confirm() {
     # call with a prompt string or use a default
@@ -60,13 +62,17 @@ echo ""
 sed -r "s/<s>/ /g; s/<\/s>/ /g; s/\(.+\)/ /g" $transcriptionFile > transcription.txt
 
 
+#Use the word count program (wc) to count the number of lines to be read
+lineCount=`wc -l < transcription.txt`
 echo "There are $lineCount sentences to be read."
 
-for ((i=1; i < lineCount; i++))
+for ((i=1; i < lineCount+1; i++))
 do
 readSentence
 clear
-mv output.wav `sed -n "$i{p;q}" $fileidsFile`.wav
+cd recordings
+mv ../output.wav `sed -n "$i{p;q}" ../$fileidsFile`.wav
+cd ../
 done
 }
 
@@ -90,10 +96,14 @@ readSentence() {
 	read
 	sed -n "$i{p;q}" transcription.txt
 	sleep 0.2
-	arecord -c 1 -V mono -r $SAMPLE_RATE -f S16_LE output.wav &
+
+	{ arecord -c 1 -V mono -r $SAMPLE_RATE -f S16_LE output.wav & } 2>/dev/null
+	
 	childId=$!
+	echo " "
 	read -n 1 -s -r -p "[Press any key to finish recording]"
-	kill -9 $childId
+	echo " "
+	{ kill -9 $childId && wait; } 2>/dev/null
 	sleep 0.5
 	if  confirm ; then
 		return 1
@@ -103,8 +113,41 @@ readSentence() {
 	fi
 }
 
-observationCounts() {
+doContObservationCounts() {
 echo "Accumulating observation counts..."
+if [ ! -f $OUTPUT_MODEL/feature_transform ]; then
+./bw -hmmdir $OUTPUT_MODEL \
+ -moddeffn $OUTPUT_MODEL/mdef.txt \
+ -ts2cbfn .cont. \
+ -feat 1s_c_d_dd \
+ -cmn current \
+ -agc none \
+ -dictfn $DICTIONARY_FILE \
+ -ctlfn $fileidsFile \
+ -lsnfn $transcriptionFile \
+ -accumdir .
+else
+echo "Found feature-transform file! Using -lda option"
+./bw -hmmdir $OUTPUT_MODEL \
+ -moddeffn $OUTPUT_MODEL/mdef.txt \
+ -ts2cbfn .cont. \
+ -feat 1s_c_d_dd \
+ -cmn current \
+ -agc none \
+ -dictfn $DICTIONARY_FILE \
+ -ctlfn $fileidsFile \
+ -lsnfn $transcriptionFile \
+ -accumdir . \
+ -lda $OUTPUT_MODEL/feature_transform
+fi
+
+echo " "
+echo "Done accumulting observation counts."
+}
+
+doPtmObservationCounts() {
+echo "Accumulating observation counts..."
+if [ ! -f $OUTPUT_MODEL/feature_transform ]; then
 ./bw -hmmdir $OUTPUT_MODEL \
  -moddeffn $OUTPUT_MODEL/mdef.txt \
  -ts2cbfn .ptm. \
@@ -116,6 +159,55 @@ echo "Accumulating observation counts..."
  -ctlfn $fileidsFile \
  -lsnfn $transcriptionFile \
  -accumdir .
+else
+echo "Found feature-transform file! Using -lda option"
+./bw -hmmdir $OUTPUT_MODEL \
+ -moddeffn $OUTPUT_MODEL/mdef.txt \
+ -ts2cbfn .ptm. \
+ -feat 1s_c_d_dd \
+ -svspec 0-12/13-25/26-38 \
+ -cmn current \
+ -agc none \
+ -dictfn $DICTIONARY_FILE \
+ -ctlfn $fileidsFile \
+ -lsnfn $transcriptionFile \
+ -accumdir . \
+ -lda $OUTPUT_MODEL/feature_transform
+fi
+
+echo " "
+echo "Done accumulting observation counts."
+}
+
+doSemiObservationCounts() {
+echo "Accumulating observation counts..."
+if [ ! -f $OUTPUT_MODEL/feature_transform ]; then
+./bw -hmmdir $OUTPUT_MODEL \
+ -moddeffn $OUTPUT_MODEL/mdef.txt \
+ -ts2cbfn .semi. \
+ -feat 1s_c_d_dd \
+ -svspec 0-12/13-25/26-38 \
+ -cmn current \
+ -agc none \
+ -dictfn $DICTIONARY_FILE \
+ -ctlfn $fileidsFile \
+ -lsnfn $transcriptionFile \
+ -accumdir .
+else
+echo "Found feature-transform file! Using -lda option"
+./bw -hmmdir $OUTPUT_MODEL \
+ -moddeffn $OUTPUT_MODEL/mdef.txt \
+ -ts2cbfn .semi. \
+ -feat 1s_c_d_dd \
+ -svspec 0-12/13-25/26-38 \
+ -cmn current \
+ -agc none \
+ -dictfn $DICTIONARY_FILE \
+ -ctlfn $fileidsFile \
+ -lsnfn $transcriptionFile \
+ -accumdir . \
+ -lda $OUTPUT_MODEL/feature_transform
+fi
 
 echo " "
 echo "Done accumulting observation counts."
@@ -132,11 +224,47 @@ echo " "
 echo "Done creating sendump file."
 }
 
-domapupdate() {
+doContMapUpdate() {
+echo "Updating acoustic model files with MAP..."
+./map_adapt \
+    -moddeffn $OUTPUT_MODEL/mdef.txt \
+    -ts2cbfn .cont. \
+    -meanfn $OUTPUT_MODEL/means \
+    -varfn $OUTPUT_MODEL/variances \
+    -mixwfn $OUTPUT_MODEL/mixture_weights \
+    -tmatfn $OUTPUT_MODEL/transition_matrices \
+    -accumdir . \
+    -mapmeanfn $OUTPUT_MODEL/means \
+    -mapvarfn $OUTPUT_MODEL/variances \
+    -mapmixwfn $OUTPUT_MODEL/mixture_weights \
+    -maptmatfn $OUTPUT_MODEL/transition_matrices
+echo " "
+echo "Done updating with MAP."
+}
+
+doPtmMapUpdate() {
 echo "Updating acoustic model files with MAP..."
 ./map_adapt \
     -moddeffn $OUTPUT_MODEL/mdef.txt \
     -ts2cbfn .ptm. \
+    -meanfn $OUTPUT_MODEL/means \
+    -varfn $OUTPUT_MODEL/variances \
+    -mixwfn $OUTPUT_MODEL/mixture_weights \
+    -tmatfn $OUTPUT_MODEL/transition_matrices \
+    -accumdir . \
+    -mapmeanfn $OUTPUT_MODEL/means \
+    -mapvarfn $OUTPUT_MODEL/variances \
+    -mapmixwfn $OUTPUT_MODEL/mixture_weights \
+    -maptmatfn $OUTPUT_MODEL/transition_matrices
+echo " "
+echo "Done updating with MAP."
+}
+
+doSemiMapUpdate() {
+echo "Updating acoustic model files with MAP..."
+./map_adapt \
+    -moddeffn $OUTPUT_MODEL/mdef.txt \
+    -ts2cbfn .semi. \
     -meanfn $OUTPUT_MODEL/means \
     -varfn $OUTPUT_MODEL/variances \
     -mixwfn $OUTPUT_MODEL/mixture_weights \
@@ -170,16 +298,61 @@ echo "Done converting mdef."
 createAcousticFeatures() {
 echo " "
 echo "Creating acoustic feature files..."
-sphinx_fe -argfile $OUTPUT_MODEL/feat.params -samprate $SAMPLE_RATE -c $fileidsFile -di . -do . -ei wav -eo mfc -mswav yes
+sphinx_fe -argfile $OUTPUT_MODEL/feat.params -samprate $SAMPLE_RATE -c $fileidsFile -di ./recordings -do . -ei wav -eo mfc -mswav yes
 echo "Done creating acoustic feature files."
 echo " "
 }
 
-packageforpocket() {
-makesendump
-rm $OUTPUT_MODEL/mdef.txt
-rm $OUTPUT_MODEL/mixture_weights
-echo "Packaged for pocket sphinx."
+testInitialModel() {
+echo "Testing acoustic model before adaptations..."
+pocketsphinx_batch \
+ -adcin yes \
+ -cepdir ./recordings \
+ -cepext .wav \
+ -ctl $fileidsFile \
+ -lm $LANGUAGE_MODEL \
+ -dict $DICTIONARY_FILE \
+ -hmm $OUTPUT_MODEL \
+ -hyp initial_test.hyp
+echo "Finished testing acoustic model before adaptations."
+}
+
+testFinalModel() {
+echo "Testing acoustic model after adaptations..."
+if [ $DO_MLLR = "no" ]; then
+pocketsphinx_batch \
+ -adcin yes \
+ -cepdir ./recordings \
+ -cepext .wav \
+ -ctl $fileidsFile \
+ -lm $LANGUAGE_MODEL \
+ -dict $DICTIONARY_FILE \
+ -hmm $OUTPUT_MODEL \
+ -hyp final_test.hyp
+else
+pocketsphinx_batch \
+ -adcin yes \
+ -cepdir ./recordings \
+ -cepext .wav \
+ -ctl $fileidsFile \
+ -lm $LANGUAGE_MODEL \
+ -dict $DICTIONARY_FILE \
+ -hmm $OUTPUT_MODEL \
+ -hyp final_test.hyp
+ -mllr $OUTPUT_MODEL/mllr_matrix
+fi
+echo "Finished testing acoustic model after adaptations."
+}
+
+compareTests() {
+echo "================================================================"
+echo "BEFORE Adaptation:"
+perl -w word_align.pl $transcriptionFile initial_test.hyp
+echo "================================================================"
+echo "AFTER Adaptation:"
+perl -w word_align.pl $transcriptionFile final_test.hyp
+echo "================================================================"
+echo ""
 }
 
 displayHelp() {
@@ -188,19 +361,24 @@ Spinx Auto Trainer Script
 
 Author: tylersengia@gmail.com
 
-Usage: trainer [OPTIONS] input_model output_model
+Usage: trainer [OPTIONS] --type TYPE input_model output_model
 	input_model : The directory/filename of acoustic model to create the trained acoustic model off of.
 	output_model : The desired name of the trained acoustic model that will be created using this script.
 
+TYPE may be any of:
+    p   PTM
+    c   continuous
+    s   semi-continuous
+        
+    
 OPTIONS may be any of:
 	-h	--help			Displays this help text and exits.
 	-r	--readings {yes|no}	Enable or disable sentence reading. Disabling sentence reading means that the audio files in the working directory (as referenced by the fileids) will be used to train.
 	-s	--sample_rate {int}	Specify the sample rate for the audio files. Expand the value (ie 16kHz should be 16000). Default is 16000.
-		--map {yes|no}		Enable or disable MAP weight updating. Default is yes.
-		--mllr {yes|no}		Enable or disable MLLR weight updating. Default is yes.
-		--convert-mdef {yes|no}	Specify whether or not to convert the mdef file in the acoustic model to text format. If it is already in text format, save yourself some time by disabling it. Default is yes.
-	-l	--lines {int}		Specify the number of lines/sentences to be read in the transcript file. (default: 21)
-	-t	--transcript {file}	Specify the transcript file for readings. (default: arctic20.transcription)
+		--map {yes|no}		Enable or disable MAP weight updating. Supported in pocketsphinx and shpinx4. Default is yes.
+		--mllr {yes|no}		Enable or disable MLLR weight updating. Currently only supported in pocketsphinx Default is yes.
+		--transcript {file}	Specify the transcript file for readings. (default: arctic20.transcription)
+		--type    TYPE        Specify what TYPE of acoustic model is being trained. See above for valid identifiers.
 	-f	--fileids {file}	Specify the fileids file for readings. (default: acrtic20.fileids)
 	-p	--pocketsphinx {yes|no} Specfiy whether or not you are training the model for pocket sphinx. Specifying yes will add optimizations. Default is yes. Set to "no" if using for Sphinx4 (Java).
         -d  --dict                      Specify the path to the dictionary to use. Default is "cmudict-en-us.dict"
@@ -236,15 +414,12 @@ case $key in
     -h|--help)
     displayHelp
     ;;
-    --covert-mdef)
-    CONVERT_MDEF="$2"
-    shift
-    ;;
+    
     -d|--dict)
     DICTIONARY_FILE="$2"
     shift
     ;;
-    -t|--transcript)
+    --transcript)
     transcriptionFile="$2"
     shift
     ;;
@@ -252,12 +427,8 @@ case $key in
     fileidsFile="$2"
     shift
     ;;
-    -p|--pocketsphinx)
-    POCKET_SPHINX="$2"
-    shift
-    ;;
-    -l|--lines)
-    lineCount="$2"
+    --type)
+    inputType="$2"
     shift
     ;;
     *)
@@ -269,10 +440,66 @@ esac
 shift # past argument or value
 done
 
-echo "Loading...."
-rm -rf recordings
-rm transcription.txt
-mkdir recordings
+#Sanitize the paths. Remove the ending / if there is one
+OUTPUT_MODEL=${OUTPUT_MODEL%/}
+INPUT_MODEL=${INPUT_MODEL%/}
+
+#Check to see if we have all of the required programs/files and error out if we don't
+if [ ! -f bw ]; then
+    echo "ERROR: You are missing the 'bw' program in this directory. Please copy it into this directory from /usr/local/libexec/sphinxtrain (or wherever it is installed)."
+    exit 1
+fi
+
+if [ ! -f map_adapt ]; then
+    echo "ERROR: You are missing the 'map_adapt' program in this directory. Please copy it into this directory from /usr/local/libexec/sphinxtrain (or wherever it is installed)."
+    exit 1
+fi
+
+if [ ! -f mllr_solve ]; then
+    echo "ERROR: You are missing the 'mllr_solve' program in this directory. Please copy it into this directory from /usr/local/libexec/sphinxtrain (or wherever it is installed)."
+    exit 1
+fi
+
+if [ ! -f mllr_transform ]; then
+    echo "ERROR: You are missing the 'mllr_transform' program in this directory. Please copy it into this directory from /usr/local/libexec/sphinxtrain (or wherever it is installed)."
+    exit 1
+fi
+
+if [ ! -f mk_s2sendump ]; then
+    echo "ERROR: You are missing the 'mk_s2sendump' program in this directory. Please copy it into this directory from /usr/local/libexec/sphinxtrain (or wherever it is installed)."
+    exit 1
+fi
+
+if [ ! -f word_align.pl ]; then
+    echo "ERROR: You are missing the 'word_align.pl' perl script in this directory. Please copy it into this directory from sphinxtrain/scripts/decode (Extracted from the tar file. This script isn't installed, it comes straight from sphinxtrain's source files)."
+    exit 1
+fi
+
+if [ ! -f $INPUT_MODEL/mixture_weights ]; then
+    echo "ERROR: You are missing the 'mixture_weights' file in your input acoustic model. You may have to download the full version of the acoustic model that has the mixture_weights file present."
+    echo "ERROR: Missing mixture_weights, cannot continue training, stopping..."
+    exit 1
+fi
+
+# Check to see if the user entered a correct acoustic model type
+case "$inputType" in
+    [pP][tT][mM]|[pP])
+        echo "Training a PTM acoustic model."
+        modelType="PTM"
+        ;;
+    cont|[cC])
+        echo "Training a continuous acoustic model."
+        modelType="CONT"
+        ;;
+    semi|[sS])
+        echo "Training a semi-continuous acoustic model."
+        modelType="SEMI"
+        ;;
+    *)
+        echo "Invalid model type supplied!!! Please include the --type argument or see --help for more details!"
+        exit 1
+        ;;
+esac
 
 test $OUTPUT_MODEL != $INPUT_MODEL && (cp -a $INPUT_MODEL $OUTPUT_MODEL) # Test to make sure these aren't the same directory. If they are, that means the user simply wants to not make a separate copy, so don't make a copy.
 
@@ -281,46 +508,86 @@ test $OUTPUT_MODEL != $INPUT_MODEL && (cp -a $INPUT_MODEL $OUTPUT_MODEL) # Test 
 #cp -a /usr/local/share/pocketsphinx/model/en-us/en-us.lm.bin .
 clear
 
-#Sanitize the destination path. Remove the ending / if there is one
-OUTPUT_MODEL=${OUTPUT_MODEL%/}
-
-#Ask to do the readings if the user didnt specify
+#Ask to do the readings if the user didn't specify
 if [ $PROMPT_FOR_READINGS = "yes" ]; then
     DO_READINGS=$(askForReadings)
 fi
 
 #Do the readings if the user wants to
 if [ $DO_READINGS = "yes" ]; then
+    #Clean up out directory before we begin
+    rm -rf recordings
+    rm transcription.txt
+    mkdir recordings
     doReadings
 fi
 
+testInitialModel
 createAcousticFeatures
 
-#Convert the mdef file to txt filetype
-if [ $CONVERT_MDEF = "yes" ]; then
+#Convert the mdef file to txt filetype if it does not exist
+if [ ! -f $OUTPUT_MODEL/mdef.txt ]; then
     convertmdef
 fi
 
-observationCounts
+#Do observation counts, according to what type of acoustic model is being used
+case "$modelType" in
+    PTM)
+        doPtmObservationCounts
+        ;;
+    CONT)
+        doContObservationCounts
+        ;;
+    SEMI)
+        doSemiObservationCounts
+        ;;
+    *)
+        echo "Invalid model type supplied. This error should never ever happen! Impossible!"
+        exit 1
+        ;;
+esac
 
-#MAP
-if [ $DO_MAP = "yes" ]; then
-    domapupdate
+# Copy fillerdict to noisedict if noisedict is missing
+if [ ! -f $OUTPUT_MODEL/noisedict ]; then
+    if [ -f fillerdict ]; then
+    echo "Missing the 'noisedict' file, copying the 'fillerdict' file to use as noisedict"
+    cp fillerdict $OUTPUT_MODEL/noisedict
+    else
+    echo "WARNING: Missing the 'noisedict' file as well as the 'fillerdict' file to replace the noisedict file. Continuing..."
+    fi
 fi
 
 #MLLR
 if [ $DO_MLLR = "yes" ]; then
+    echo "IMPORTANT: The MLLR Adaptation is supported in pocketsphinx but not sphinx4 (Java). It basically creates another config file to adjust all features. If using sphinx4, you need to use MAP adaptation."
+    if [ $modelType = "SEMI" ]; then
+        
+        echo "WARNING: The MLLR Adaptation is not very effective for semi-continuous models because they rely on mixture weights. Continuing anyways..."
+    fi
     domllrupdate
+    cp mllr_matrix $OUTPUT_MODEL/mllr_matrix
 fi
 
-#MLLR
-if [ $CREATE_SENDUMP = "yes" ]; then
-    makesendump
+#MAP
+if [ $DO_MAP = "yes" ]; then
+    if [ $modelType = "CONT" ]; then
+        echo "WARNING: The MAP Adaptation requires lots of adaptation data to work effectively on continuous models."
+        doContMapUpdate
+    fi
+    if [ $modelType = "SEMI" ]; then
+        doSemiMapUpdate
+    fi
+    if [ $modelType = "PTM" ]; then
+        doPtmMapUpdate
+    fi
 fi
+read -n 1 -s -p "Please read the above output thoroughly and then press any key to continue..."
 
-#Pocket Sphinx
-if [ $POCKET_SPHINX = "yes" ]; then
-    packageforpocket
-fi
+makesendump
+
+testFinalModel
+echo " "
+echo " "
+compareTests
 
 echo "DONE TRAINING."
