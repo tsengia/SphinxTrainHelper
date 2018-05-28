@@ -49,12 +49,23 @@ The CMU Sphinx website provides examples for writing transcript and file IDs fil
 
 ### Transcription File
 A text file containing the words that will be/are spoken in an audio file.  
-The words should be grouped into sentences as marked by an XML-like `<s>Your words go here</s>` tag.
+The words should be grouped into sentences as marked by an XML-like `<s> Your words go here </s>` tag.
 Following the `<s>` tag should be a space and a set of parenthesis with the audio file name inside (without the extension).  
 For example:  
 
     <s> hello world this is an example transcription file </s> (audiofile_0001)
     <s> this is the second sentence in the transcription file </s> (audiofile_0002)
     <s> we can even add a third sentence </s> (audiofile_0003)
-    <s> just remember to increment the file id in the parenthesises </s> (audiofile_0001)
+    <s> just remember to increment the file id in the parenthesises </s> (audiofile_0004)
+    
+### File IDs File
+The File IDs file is simply a text file where each line contains the file name of an audio file (do not include the extension).  
+The file names should be listed in the same order as the transcription file.  
+Remember to increment any numbers identifying the audio files.
+Example File IDs file:
+    audiofile_0001
+    audiofile_0002
+    audiofile_0003
+    audiofile_0004
+    audiofile_0005
     
