@@ -39,3 +39,7 @@ Additionally, the `word_align.pl` script is needed to test the effectiveness of 
         	-p	--pocketsphinx {yes|no} Specfiy whether or not you are training the model for pocket sphinx. Specifying yes will add optimizations. Default is yes. Set to "no" if using for Sphinx4 (Java).
                 -d  --dict                      Specify the path to the dictionary to use. Default is "cmudict-en-us.dict"
             
+# Readings Mode
+The so called "Readings Mode" in this script is a simple command line interface that allows the user to read the entire transcript file line by line while recording. If readings mode is enabled, the user will be displayed a line from the transcript file that should be read aloud. When the user is done reading the line, they can press any key to stop recording. The user is then prompted to either user the recording or redo the recording. Once all lines from the transcript are read, the script will begin adapting the acoustic model.  
+
+The purpose of Readings Mode is to make recording quick, simple, and painless for the user. No need to open up Audacity or a recording program and splice audio recordings, just read and press the enter key.
