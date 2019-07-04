@@ -414,13 +414,17 @@ case $key in
     -h|--help)
     displayHelp
     ;;
-    
     -d|--dict)
     DICTIONARY_FILE="$2"
     shift
     ;;
+    -p|--pocketsphinx)
+    POCKET_SPHINX="$2"
+    shift
+    ;;
     --transcript)
     transcriptionFile="$2"
+    echo "Trans file set to: $transcriptionFile"
     shift
     ;;
     -f|--fileids)
@@ -478,7 +482,7 @@ fi
 if [ ! -f $INPUT_MODEL/mixture_weights ]; then
     echo "ERROR: You are missing the 'mixture_weights' file in your input acoustic model. You may have to download the full version of the acoustic model that has the mixture_weights file present."
     echo "ERROR: Missing mixture_weights, cannot continue training, stopping..."
-    exit 1
+    #exit 1
 fi
 
 #Check to see if we have all the necessary config/base files.
@@ -527,11 +531,13 @@ case "$inputType" in
         ;;
 esac
 
-# Test to make sure these aren't the same 
+# Test to make sure these aren't the same
 if [ $OUTPUT_MODEL/feat.params -ef $INPUT_MODEL/feat.params ]; then
     echo "ERROR: Input and Output model paths are the same! This is not allowed!"
     exit 1
 fi
+
+cp -r $INPUT_MODEL $OUTPUT_MODEL
 
 clear
 
