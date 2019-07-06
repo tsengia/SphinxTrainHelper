@@ -8,7 +8,7 @@
 #
 # This script is not associated with, or created by the creators of Sphinx CMU.
 # This author of this script/program/file is Tyler Sengia.
-# 
+#
 # Any damage, modifications, errors, side effects, etc that this script/program/file causes
 # is at the liability of the user and not the author.
 # By downloading/installing/running this script you agree to these terms.
@@ -24,6 +24,8 @@ lineCount=21 # Number of lines to be read for the readings
 #Variables and their default values
 PROMPT_FOR_READINGS="yes"
 DO_READINGS="yes"
+DO_TESTS="yes"
+DO_TEST_INITIAL="yes"
 transcriptionFile="arctic20.transcription"
 fileidsFile="arctic20.fileids"
 CREATE_SENDUMP="no"
@@ -98,7 +100,7 @@ readSentence() {
 	sleep 0.2
 
 	{ arecord -c 1 -V mono -r $SAMPLE_RATE -f S16_LE output.wav & } 2>/dev/null
-	
+
 	childId=$!
 	echo " "
 	read -n 1 -s -r -p "[Press any key to finish recording]"
@@ -338,7 +340,7 @@ pocketsphinx_batch \
  -lm $LANGUAGE_MODEL \
  -dict $DICTIONARY_FILE \
  -hmm $OUTPUT_MODEL \
- -hyp final_test.hyp
+ -hyp final_test.hyp \
  -mllr $OUTPUT_MODEL/mllr_matrix
 fi
 echo "Finished testing acoustic model after adaptations."
@@ -357,7 +359,7 @@ echo ""
 
 displayHelp() {
 cat << EOF
-Spinx Auto Trainer Script						
+Spinx Auto Trainer Script
 
 Author: tylersengia@gmail.com
 
@@ -369,8 +371,8 @@ TYPE may be any of:
     p   PTM
     c   continuous
     s   semi-continuous
-        
-    
+
+
 OPTIONS may be any of:
 	-h	--help			Displays this help text and exits.
 	-r	--readings {yes|no}	Enable or disable sentence reading. Disabling sentence reading means that the audio files in the working directory (as referenced by the fileids) will be used to train.
@@ -379,10 +381,11 @@ OPTIONS may be any of:
 		--mllr {yes|no}		Enable or disable MLLR weight updating. Currently only supported in pocketsphinx Default is yes.
 		--transcript {file}	Specify the transcript file for readings. (default: arctic20.transcription)
 		--type    TYPE        Specify what TYPE of acoustic model is being trained. See above for valid identifiers.
+	-i	--test_initial {yes|no}	Specifiy whether or not to test the initial acoustic model before adaptation. This can help save time. Default is yes.
 	-f	--fileids {file}	Specify the fileids file for readings. (default: acrtic20.fileids)
 	-p	--pocketsphinx {yes|no} Specfiy whether or not you are training the model for pocket sphinx. Specifying yes will add optimizations. Default is yes. Set to "no" if using for Sphinx4 (Java).
         -d  --dict                      Specify the path to the dictionary to use. Default is "cmudict-en-us.dict"
-    
+
 Issues, questions or suggestions: https://github.com/ExpandingDev/SphinxTrainingHelper
 EOF
 exit 2
@@ -414,6 +417,10 @@ case $key in
     -h|--help)
     displayHelp
     ;;
+    -i|--test_initial)
+    DO_TEST_INITIAL="$2"
+    shift
+    ;;
     -d|--dict)
     DICTIONARY_FILE="$2"
     shift
@@ -424,7 +431,6 @@ case $key in
     ;;
     --transcript)
     transcriptionFile="$2"
-    echo "Trans file set to: $transcriptionFile"
     shift
     ;;
     -f|--fileids)
@@ -482,7 +488,7 @@ fi
 if [ ! -f $INPUT_MODEL/mixture_weights ]; then
     echo "ERROR: You are missing the 'mixture_weights' file in your input acoustic model. You may have to download the full version of the acoustic model that has the mixture_weights file present."
     echo "ERROR: Missing mixture_weights, cannot continue training, stopping..."
-    #exit 1
+    exit 1
 fi
 
 #Check to see if we have all the necessary config/base files.
@@ -555,7 +561,10 @@ if [ $DO_READINGS = "yes" ]; then
     doReadings
 fi
 
-testInitialModel
+if [ $DO_TEST_INITIAL = "yes" ]; then
+	testInitialModel
+fi
+
 createAcousticFeatures
 
 #Convert the mdef file to txt filetype if it does not exist
@@ -586,7 +595,8 @@ if [ ! -f $OUTPUT_MODEL/noisedict ]; then
     echo "Missing the 'noisedict' file, copying the 'fillerdict' file to use as noisedict"
     cp fillerdict $OUTPUT_MODEL/noisedict
     else
-    echo "WARNING: Missing the 'noisedict' file as well as the 'fillerdict' file to replace the noisedict file. Continuing..."
+    echo "WARNING: Missing the 'noisedict' file as well as the 'fillerdict' file to replace the noisedict file. Press enter to continue."
+    read
     fi
 fi
 
@@ -594,8 +604,8 @@ fi
 if [ $DO_MLLR = "yes" ]; then
     echo "IMPORTANT: The MLLR Adaptation is supported in pocketsphinx but not sphinx4 (Java). It basically creates another config file to adjust all features. If using sphinx4, you need to use MAP adaptation."
     if [ $modelType = "SEMI" ]; then
-        
-        echo "WARNING: The MLLR Adaptation is not very effective for semi-continuous models because they rely on mixture weights. Continuing anyways..."
+        echo "WARNING: The MLLR Adaptation is not very effective for semi-continuous models because they rely on mixture weights. Press enter to continue."
+    	read
     fi
     domllrupdate
     cp mllr_matrix $OUTPUT_MODEL/mllr_matrix
@@ -604,8 +614,9 @@ fi
 #MAP
 if [ $DO_MAP = "yes" ]; then
     if [ $modelType = "CONT" ]; then
-        echo "WARNING: The MAP Adaptation requires lots of adaptation data to work effectively on continuous models."
-        doContMapUpdate
+        echo "WARNING: The MAP Adaptation requires lots of adaptation data to work effectively on continuous models. Press enter to continue."
+        read
+	doContMapUpdate
     fi
     if [ $modelType = "SEMI" ]; then
         doSemiMapUpdate
