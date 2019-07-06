@@ -359,7 +359,7 @@ echo ""
 
 displayHelp() {
 cat << EOF
-Spinx Auto Trainer Script
+Sphinx Auto Trainer Script
 
 Author: tylersengia@gmail.com
 
