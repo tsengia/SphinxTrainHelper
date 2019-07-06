@@ -362,20 +362,21 @@ echo ""
 
 displayHelp() {
 cat << EOF
-Spinx Auto Trainer Script						
+Sphinx Auto Trainer Script - Randomly Generated Transcript
 
 Author: tylersengia@gmail.com
 
-Usage: trainer [OPTIONS] --type TYPE input_model output_model
+Usage: trainer [OPTIONS] --type TYPE input_model output_model sentence_count
 	input_model : The directory/filename of acoustic model to create the trained acoustic model off of.
 	output_model : The desired name of the trained acoustic model that will be created using this script.
+	sentence_count : The desired number of randomly generated senctences that the user would like to read off.
 
 TYPE may be any of:
     p   PTM
     c   continuous
     s   semi-continuous
-        
-    
+
+
 OPTIONS may be any of:
 	-h	--help			Displays this help text and exits.
 	-r	--readings {yes|no}	Enable or disable sentence reading. Disabling sentence reading means that the audio files in the working directory (as referenced by the fileids) will be used to train.
@@ -388,7 +389,7 @@ OPTIONS may be any of:
 	-f	--fileids {file}	Specify the fileids file for readings. (default: acrtic20.fileids)
 	-p	--pocketsphinx {yes|no} Specfiy whether or not you are training the model for pocket sphinx. Specifying yes will add optimizations. Default is yes. Set to "no" if using for Sphinx4 (Java).
         -d  --dict                      Specify the path to the dictionary to use. Default is "cmudict-en-us.dict"
-    
+
 Issues, questions or suggestions: https://github.com/ExpandingDev/SphinxTrainingHelper
 EOF
 exit 2
