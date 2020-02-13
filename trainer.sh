@@ -8,11 +8,6 @@
 #
 # This script is not associated with, or created by the creators of Sphinx CMU.
 # This author of this script/program/file is Tyler Sengia.
-#
-# Any damage, modifications, errors, side effects, etc that this script/program/file causes
-# is at the liability of the user and not the author.
-# By downloading/installing/running this script you agree to these terms.
-#
 ###############################################################################################
 #
 # Based on the instructions from: https://cmusphinx.github.io/wiki/tutorialadapt/
